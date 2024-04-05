@@ -1,15 +1,31 @@
+import { addChart } from "@/app/actions/user";
 import { useState } from "react";
 
 type newProjectProps = {
   setFloat: React.Dispatch<React.SetStateAction<boolean>>;
-  plots: string[];
-  setPlots: React.Dispatch<React.SetStateAction<string[]>>;
+  plots: 
+  | {
+      id: string;
+      type: string;
+      column: number;
+      projectId: string;
+    }[]
+  | null;
+  setPlots: React.Dispatch<React.SetStateAction<
+  | {
+      id: string;
+      type: string;
+      column: number;
+      projectId: string;
+    }[]
+  | null>>;
   options:
     | {
         name: string;
         values: Number[];
       }[]
     | undefined;
+    projectId: string
 };
 
 export default function NewPlot({
@@ -17,6 +33,7 @@ export default function NewPlot({
   plots,
   setPlots,
   options,
+  projectId
 }: newProjectProps) {
   const [densityColumn, setDensityColumn] = useState(0);
   const [densityFloat, setDensityFloat] = useState<boolean>(false);
@@ -63,9 +80,9 @@ export default function NewPlot({
             Cancel
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
+              await addChart(projectId, "Density", densityColumn)
               setFloat(false);
-              setPlots([...plots, `Density-${densityColumn}`]);
             }}
             className="p-2 mt-3 w-32 bg-blue-600 text-white text-md rounded-md hover:bg-blue-500 transition-colors duration-300"
           >
@@ -108,9 +125,9 @@ export default function NewPlot({
             Cancel
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
+              await addChart(projectId, "Area", areaColumn)
               setFloat(false);
-              setPlots([...plots, `Area-${areaColumn}`]);
             }}
             className="p-2 mt-3 w-32 bg-blue-600 text-white text-md rounded-md hover:bg-blue-500 transition-colors duration-300"
           >
@@ -154,9 +171,9 @@ export default function NewPlot({
             Cancel
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
+              await addChart(projectId, "Line", lineColumn)
               setFloat(false);
-              setPlots([...plots, `Line-${lineColumn}`]);
             }}
             className="p-2 mt-3 w-32 bg-blue-600 text-white text-md rounded-md hover:bg-blue-500 transition-colors duration-300"
           >
@@ -199,9 +216,9 @@ export default function NewPlot({
             Cancel
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
+              await addChart(projectId, "Histo", histoColumn)
               setFloat(false);
-              setPlots([...plots, `Histo-${histoColumn}`]);
             }}
             className="p-2 mt-3 w-32 bg-blue-600 text-white text-md rounded-md hover:bg-blue-500 transition-colors duration-300"
           >

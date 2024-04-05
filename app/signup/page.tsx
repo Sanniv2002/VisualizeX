@@ -1,19 +1,14 @@
 "use client";
 import Link from "next/link";
 import Quotes from "@/components/Quotes";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signup } from "../actions/user";
-import { createHash } from "crypto";
 import Toast from "@/components/toast";
-import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
+  const router = useRouter()
   const [quote, setQuote] = useState<JSX.Element | null>(null);
-
-  //States for form
-  const [name, setName] = useState<string>("");
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
   const [toast, setToast] = useState<boolean>(false);
   const [success, setSuccess] = useState<{
     success: boolean;
@@ -31,19 +26,6 @@ export default function Page() {
   useEffect(() => {
     setQuote(Quotes);
   }, []);
-
-  const onSubmit = async () => {
-    setClicked(true);
-    console.log(nameRef.current, emailRef.current, passRef.current)
-    const result = await signIn("signup", {
-      name: nameRef.current,
-      email: emailRef.current,
-      password: passRef.current,
-      redirect: true,
-      callbackUrl: "/dashboard"
-    })
-    setClicked(false);
-  }
 
   return (
     <main className="lg:grid lg:grid-cols-2 bg-gray-900 h-screen items-center">
@@ -88,7 +70,31 @@ export default function Page() {
         </div>
         {!clicked ? (
           <button
-            onClick={onSubmit}
+            onClick={async () => {
+              //Check if form fields are missing
+              if (nameRef.current && passRef.current && emailRef.current) {
+                setClicked(true);
+                const token = await signup(nameRef.current, emailRef.current, passRef.current);
+                if (token) {
+                  setToast(true);
+                  setSuccess({
+                    success: true,
+                    warning: "Successfully signed up",
+                  });
+                  setTimeout(() => setToast(false), 3000);
+                  await new Promise((resolve) => setTimeout(resolve, 1000))
+                  router.push("/signin")
+                } else {
+                  setToast(true);
+                  setSuccess({
+                    success: false,
+                    warning: "Email ID is already taken",
+                  });
+                  setTimeout(() => setToast(false), 3000);
+                }
+                setClicked(false);
+              }
+            }}
             className=" bg-indigo-700 text-gray-200 p-2 rounded-xl w-80 hover:bg-gray-600 hover:text-gray-300 transition-colors duration-300"
           >
             Sign Up

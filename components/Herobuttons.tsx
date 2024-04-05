@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function(){
     return <div className="flex gap-5">
-        <Link href="/dashboard">
+        <Link href="/tryit">
             <button className="text-black p-3 w-32 rounded-xl bg-gray-300 text-md hover:bg-gray-400 transition-colors duration-300">Try it &rarr;</button>
         </Link>
         <Link href="/signup">

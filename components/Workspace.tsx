@@ -6,6 +6,17 @@ import { Histogram } from "./Plots/Histogram";
 import { useState, useEffect } from "react";
 import NewPlot from "./NewPlot";
 import * as d3 from "d3";
+import 'dotenv/config'
+import { useRouter } from "next/navigation";
+import Delete from "./Delete";
+import {
+  deleteChart,
+  getAllCharts,
+  getProjectDetails,
+  updateCsvLink,
+} from "@/app/actions/user";
+import AWS from "aws-sdk";
+import { useSession } from "next-auth/react";
 
 type commonData = {
   name: string;
@@ -17,31 +28,50 @@ type areaData = {
   y: number;
 };
 
-export default function Workspace() {
+export default function Workspace({ id }: { id: string }) {
+  const router = useRouter();
   const [options, setOptions] = useState<string[]>([]);
   const [rows, setRows] = useState<(string[] | number[])[]>([]);
   const [processedData, setProcesseddata] = useState<commonData[]>();
+  const [uploading, setUploading] = useState(false);
   const [float, setFloat] = useState(false);
-  const [plots, setPlots] = useState<string[]>([]);
-  const [file, setFile] = useState(true);
+  const [del, setDel] = useState<boolean>(false);
+  const [trigger, setTrigger] = useState(false);
+  const [isFile, setIsFile] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [plots, setPlots] = useState<
+    | {
+        id: string;
+        type: string;
+        column: number;
+        projectId: string;
+      }[]
+    | null
+  >([]);
 
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 0,
     height: typeof window !== "undefined" ? window.innerHeight : 0,
   });
 
+  console.log(process.env.NEXT_PUBLIC_accessKeyId)
+  const session = useSession()
+  if(session.status==='unauthenticated'){
+    router.push("/")
+  }
+
   async function parseCSV(address: string) {
     try {
+      setLoading(true);
       const rows_arr: (string[] | number[])[] = [];
       //GET REQUEST HERE FOR CSV FETCHING
-      const data = await d3.csv(
-        address
-      );
+      const data = await d3.csv(address);
       setOptions(Object.keys(data[0]));
       data.map((d) => {
         rows_arr.push(Object.values(d));
       });
       setRows(rows_arr);
+      setLoading(false);
     } catch (e) {
       console.log("Unexpected error occured: ", e);
     }
@@ -80,24 +110,58 @@ export default function Workspace() {
     }));
   }
 
+  async function handleFileUpload(file: any) {
+    setUploading(true);
+    const region = "ap-south-1";
+    const accessKeyId = "AKIAYS2NUX5CDKGEO2LE";
+    const secretAccessKey = "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";
+
+    AWS.config.update({
+      region: region,
+      credentials: new AWS.Credentials(accessKeyId, secretAccessKey),
+    });
+    const params = {
+      Bucket: "bucket.visualprod",
+      Key: file?.name as string,
+      Body: file || undefined,
+    };
+    const s3 = new AWS.S3();
+    s3.upload(
+      params,
+      async (
+        err: any,
+        data: {
+          Location: string;
+          Bucket: string;
+          Key: string;
+        }
+      ) => {
+        await updateCsvLink(id, data.Location);
+        setIsFile(true);
+      }
+    );
+    setUploading(false);
+  }
+
   const PlotsRenderer = () => {
     return plots?.map((plot) => {
-      const props = plot.split("-");
-
-      if (props[0] === "Density") {
-        const [t, c] = plot.split("-");
+      if (plot.type === "Density") {
+        const c = plot.column;
         if (processedData) {
           return (
             <div className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
-                <h2 className="pt-1">Density Chart: <span className="text-gray-200">{processedData[parseInt(c)].name}:</span> </h2>
+                <h2 className="pt-1">
+                  Density Chart:{" "}
+                  <span className="text-gray-200">
+                    {processedData[c].name}:
+                  </span>{" "}
+                </h2>
                 <svg
                   className="hover:cursor-pointer"
-                  onClick={() => {
-                    setPlots([
-                      ...plots.slice(0, plots.indexOf(plot)),
-                      ...plots.slice(plots.indexOf(plot) + 1),
-                    ]);
+                  onClick={async () => {
+                    await deleteChart(plot.id);
+                    setTrigger(!trigger);
                   }}
                   xmlns="http://www.w3.org/2000/svg"
                   version="1.1"
@@ -114,32 +178,39 @@ export default function Workspace() {
                 </svg>
               </div>
               <Density
-                data={processedData.slice(parseInt(c), parseInt(c) + 1)}
-                width={windowSize.width<770? windowSize.width / 1.2 : windowSize.width / 2.5}
+                data={processedData.slice(c, c + 1)}
+                width={
+                  windowSize.width < 770
+                    ? windowSize.width / 1.2
+                    : windowSize.width / 2.5
+                }
                 height={windowSize.height / 2.5}
               />
             </div>
           );
         } else return <div></div>;
-      } else if (props[0] === "Area") {
-        const [t, c] = plot.split("-");
+      } else if (plot.type === "Area") {
+        const c = plot.column;
 
         if (processedData) {
           const transformedData: areaData[] = extractColumnData(
             processedData,
-            parseInt(c)
+            c
           );
           return (
             <div className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
-                <h2>Area Chart: <span className="text-gray-200">{processedData[parseInt(c)].name}:</span></h2>
+                <h2>
+                  Area Chart:{" "}
+                  <span className="text-gray-200">
+                    {processedData[c].name}:
+                  </span>
+                </h2>
                 <svg
                   className="hover:cursor-pointer"
-                  onClick={() => {
-                    setPlots([
-                      ...plots.slice(0, plots.indexOf(plot)),
-                      ...plots.slice(plots.indexOf(plot) + 1),
-                    ]);
+                  onClick={async () => {
+                    await deleteChart(plot.id);
+                    setTrigger(!trigger);
                   }}
                   xmlns="http://www.w3.org/2000/svg"
                   version="1.1"
@@ -157,26 +228,33 @@ export default function Workspace() {
               </div>
               <AreaChart
                 data={transformedData}
-                width={windowSize.width<770? windowSize.width / 1.2 : windowSize.width / 2.5}
+                width={
+                  windowSize.width < 770
+                    ? windowSize.width / 1.2
+                    : windowSize.width / 2.5
+                }
                 height={windowSize.height / 2.5}
               />
             </div>
           );
         } else return <div></div>;
-      } else if (props[0] === "Histo") {
-        const [t, c] = plot.split("-");
+      } else if (plot.type === "Histo") {
+        const c = plot.column;
         if (processedData) {
           return (
             <div className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
-                <h2>Histogram: <span className="text-gray-200">{processedData[parseInt(c)].name}:</span></h2>
+                <h2>
+                  Histogram:{" "}
+                  <span className="text-gray-200">
+                    {processedData[c].name}:
+                  </span>
+                </h2>
                 <svg
                   className="hover:cursor-pointer"
-                  onClick={() => {
-                    setPlots([
-                      ...plots.slice(0, plots.indexOf(plot)),
-                      ...plots.slice(plots.indexOf(plot) + 1),
-                    ]);
+                  onClick={async () => {
+                    await deleteChart(plot.id);
+                    setTrigger(!trigger);
                   }}
                   xmlns="http://www.w3.org/2000/svg"
                   version="1.1"
@@ -193,32 +271,39 @@ export default function Workspace() {
                 </svg>
               </div>
               <Histogram
-                data={processedData[parseInt(c)].values}
-                width={windowSize.width<770? windowSize.width / 1.2 : windowSize.width / 2.5}
+                data={processedData[c].values}
+                width={
+                  windowSize.width < 770
+                    ? windowSize.width / 1.2
+                    : windowSize.width / 2.5
+                }
                 height={windowSize.height / 2.5}
               />
             </div>
           );
         } else return <div></div>;
-      } else if (props[0] === "Line") {
-        const [t, c] = plot.split("-");
+      } else if (plot.type === "Line") {
+        const c = plot.column;
 
         if (processedData) {
           const transformedData: areaData[] = extractColumnData(
             processedData,
-            parseInt(c)
+            c
           );
           return (
             <div className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
-                <h2>Line Plot: <span className="text-gray-200">{processedData[parseInt(c)].name}:</span></h2>
+                <h2>
+                  Line Plot:{" "}
+                  <span className="text-gray-200">
+                    {processedData[c].name}:
+                  </span>
+                </h2>
                 <svg
                   className="hover:cursor-pointer"
-                  onClick={() => {
-                    setPlots([
-                      ...plots.slice(0, plots.indexOf(plot)),
-                      ...plots.slice(plots.indexOf(plot) + 1),
-                    ]);
+                  onClick={async () => {
+                    await deleteChart(plot.id);
+                    setTrigger(!trigger);
                   }}
                   xmlns="http://www.w3.org/2000/svg"
                   version="1.1"
@@ -236,11 +321,16 @@ export default function Workspace() {
               </div>
               <LineChart
                 data={transformedData}
-                width={windowSize.width<770? windowSize.width / 1.2 : windowSize.width / 2.5}
+                width={
+                  windowSize.width < 770
+                    ? windowSize.width / 1.2
+                    : windowSize.width / 2.5
+                }
                 height={windowSize.height / 2.5}
               />
             </div>
-          );}else return<div></div>
+          );
+        } else return <div></div>;
       }
     });
   };
@@ -262,8 +352,16 @@ export default function Workspace() {
   }, []);
 
   useEffect(() => {
-    parseCSV("https://s3.ap-south-1.amazonaws.com/bucket.visauldev/Popular_Spotify_Songs.csv");
-  }, []);
+    async function init() {
+      const project = await getProjectDetails(id);
+      if (project?.csv !== null) {
+        await parseCSV(project?.csv as string);
+        setIsFile(true)
+      }
+    }
+    init();
+  }, [isFile]);
+
 
   useEffect(() => {
     if (options.length && rows.length) {
@@ -271,39 +369,76 @@ export default function Workspace() {
     }
   }, [rows, options]);
 
+  useEffect(() => {
+    async function init() {
+      const allCharts = await getAllCharts(id);
+      setPlots(allCharts);
+    }
+    init();
+  }, [float, trigger]);
+
   return (
     <div className="bg-gray-900">
       {/* Top Bar */}
       <div className="flex justify-between border-b-fuchsia-400 border-b-2 mb-6">
         <h2 className="text-white text-2xl pb-4 font-bold">Plots</h2>
-        {!file ? (
-          <div className="flex w-20 h-10 mb-3 sm:mb-0">
-            <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-gray-500 dark:hover:bg-gray-500">
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <svg
-                  className="w-8 h-8 text-fuchsia-200
-              "
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 20 16"
-                >
-                  <path
-                    stroke="currentColor"
-                    d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                  />
-                </svg>
-              </div>
-              <input
-                accept=".csv"
-                onChange={(e) => {
-                  setFile(true);
-                }}
-                type="file"
-                className="hidden"
-              />
-            </label>
-          </div>
+        {!isFile ? (
+          uploading ? (
+            <div className="flex w-20 h-10 mb-3 sm:mb-0">
+              <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-500">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg
+                  className="w-8 h-8 mt-3"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 64 80"
+                    fill="none"
+                    x="0px"
+                    y="100px"
+                  >
+                    <path
+                      d="M18.9286 2C14.8089 2 11.0982 3.76412 8.52598 6.57214C7.77988 7.38664 7.83533 8.65175 8.64983 9.39785C9.46432 10.144 10.7294 10.0885 11.4755 9.27401C13.3191 7.26143 15.9729 6 18.9286 6C24.5021 6 29 10.4883 29 16C29 21.5117 24.5021 26 18.9286 26C14.8129 26 11.2838 23.5526 9.71913 20.053C10.1906 19.9796 10.6375 19.7382 10.9623 19.3389C11.6593 18.482 11.5296 17.2223 10.6727 16.5253L8.11911 14.4484C7.6828 14.0935 7.11722 13.9388 6.56101 14.022C6.00479 14.1053 5.50934 14.4189 5.19609 14.886L3.33895 17.6553C2.72373 18.5726 2.96867 19.8151 3.88604 20.4303C4.42764 20.7935 5.08254 20.8569 5.65478 20.6591C7.58564 26.1055 12.8061 30 18.9286 30C26.6888 30 33 23.7432 33 16C33 8.25684 26.6888 2 18.9286 2Z"
+                      fill="black"
+                    />
+                    <path
+                      fill-rule="evenodd"
+                      clip-rule="evenodd"
+                      d="M37 16C37 20.2866 35.5016 24.2232 33 27.3147V41H6L6 28.4499C4.23521 26.6077 2.85817 24.391 2 21.931V51C2 54.3137 4.68629 57 8 57H9.28988C10.1504 59.8915 12.829 62 16 62C19.171 62 21.8496 59.8915 22.7101 57L37.2899 57C38.1504 59.8915 40.829 62 44 62C47.171 62 49.8496 59.8915 50.7101 57H56C59.3137 57 62 54.3137 62 51V40.75C62 40.1183 61.7015 39.5237 61.195 39.1462L55.8835 35.1887C55.3125 34.7633 54.6743 34.4456 54 34.2463V28C55.1046 28 56 27.1046 56 26V25C56 20.0294 51.9706 16 47 16L37 16ZM50.7101 53H56C57.1046 53 58 52.1046 58 51V47H54C52.8954 47 52 46.1046 52 45C52 43.8954 52.8954 43 54 43H58V41.7539L53.4936 38.3962C53.1483 38.139 52.7292 38 52.2986 38H37V53H37.2899C38.1504 50.1085 40.829 48 44 48C47.171 48 49.8496 50.1085 50.7101 53ZM22.7101 53H33L33 45L6 45L6 51C6 52.1046 6.89543 53 8 53H9.28988C10.1504 50.1085 12.829 48 16 48C19.171 48 21.8496 50.1085 22.7101 53ZM37 20V24L51.9 24C51.4367 21.7178 49.419 20 47 20L37 20ZM37 28V34H50V28L37 28ZM13 55C13 53.3431 14.3431 52 16 52C17.6569 52 19 53.3431 19 55C19 56.6569 17.6569 58 16 58C14.3431 58 13 56.6569 13 55ZM41 55C41 53.3431 42.3431 52 44 52C45.6569 52 47 53.3431 47 55C47 56.6569 45.6569 58 44 58C42.3431 58 41 56.6569 41 55Z"
+                      fill="black"
+                    />
+                  </svg>
+                </div>
+              </label>
+            </div>
+          ) : (
+            <div className="flex w-20 h-10 mb-3 sm:mb-0">
+              <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-gray-500 dark:hover:bg-gray-500">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg
+                    className="w-8 h-8 text-fuchsia-200"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 20 16"
+                  >
+                    <path
+                      stroke="currentColor"
+                      d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                    />
+                  </svg>
+                </div>
+                <input
+                  accept=".csv"
+                  onChange={async (e) => {
+                    if (e.target.files) {
+                      await handleFileUpload(e.target.files[0]);
+                    }
+                  }}
+                  type="file"
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )
         ) : (
           <div className="flex w-20 h-10">
             <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg bg-gray-500  dark:bg-gray-700 dark:border-gray-500">
@@ -332,7 +467,10 @@ export default function Workspace() {
         )}
         <div className="flex gap-2 group fixed bottom-12">
           <div className="flex w-20 h-10 mb-3 sm:mb-0">
-            <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-400 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-blue-300 dark:hover:bg-blue-500">
+            <label
+              onClick={() => router.push("/dashboard")}
+              className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-400 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-blue-300 dark:hover:bg-blue-500"
+            >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -352,10 +490,16 @@ export default function Workspace() {
           </div>
 
           <div
-            onClick={() => setFloat(true)}
+            onClick={() => (isFile ? setFloat(true) : null)}
             className="flex w-20 h-10 mb-3 sm:mb-0"
           >
-            <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-500 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-green-700 dark:hover:bg-green-500">
+            <label
+              className={`flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-500 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 ${
+                isFile
+                  ? "dark:hover:border-green-700 dark:hover:bg-green-500"
+                  : `hover:bg-gray-500 dark:hover:border-gray-900`
+              }`}
+            >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -385,7 +529,10 @@ export default function Workspace() {
           </div>
 
           <div className="flex w-20 h-10 mb-3 sm:mb-0">
-            <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-400 dark:hover:border-red-700 dark:hover:bg-red-400">
+            <label
+              onClick={() => setDel(true)}
+              className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-400 dark:hover:border-red-700 dark:hover:bg-red-400"
+            >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -402,7 +549,7 @@ export default function Workspace() {
         </div>
       </div>
 
-      {file ? (
+      {isFile ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <PlotsRenderer />
         </div>
@@ -412,32 +559,21 @@ export default function Workspace() {
         </div>
       )}
 
-      {/* <div className="flex justify-center items-center bg-gray-770 rounded-md h-36 w-60">
-        <div
-          className="text-fuchsia-770 inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-e-transparent align-[-0.125em] text-success motion-reduce:animate-[spin_1.5s_linear_infinite]"
-          role="status"
-        >
-          <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
-            Loading...
-          </span>
-        </div>
-      </div> */}
-
-      {/* {processedData ? (
-        <div className="flex items-center justify-center bg-gray-500 rounded-xl">
-          <Density data={processedData.slice(1, 2)} width={400} height={400} />
-        </div>
-      ) : null} */}
-
       {float ? (
         <div className="fixed inset-0 bg-gray-700 h-screen flex items-center justify-center bg-opacity-45 backdrop-blur-sm">
           {/* Lots of prop drilling */}
           <NewPlot
+            projectId={id}
             setFloat={setFloat}
             plots={plots}
             setPlots={setPlots}
             options={processedData}
           />
+        </div>
+      ) : null}
+      {del ? (
+        <div className="fixed inset-0 bg-gray-700 h-screen flex items-center justify-center bg-opacity-45 backdrop-blur-sm">
+          <Delete setFloat={setDel} id={id} />
         </div>
       ) : null}
     </div>

@@ -1,11 +1,12 @@
 import prisma from "@/db";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { createHash } from "crypto";
+import { compare, hash } from "bcrypt";
 
 export const authOptions = {
   providers: [
     CredentialsProvider({
-      name: "signin",
+      name: "Credentials",
       credentials: {
         email: { label: "email", type: "text", required: true },
         password: { label: "password", type: "password", required: true },
@@ -14,65 +15,21 @@ export const authOptions = {
       async authorize(
         credentials: Record<"email" | "password", string> | undefined
       ) {
-        const hashedPassword = createHash("sha256")
-          .update(credentials?.password + "salt")
-          .digest("hex");
         try {
           const isExistingUser = await prisma.user.findUnique({
             where: {
               email: credentials?.email,
-              password: hashedPassword,
             },
           });
           if (!isExistingUser) return null;
+          const passMatch = await compare(credentials?.password as string, isExistingUser.password)
+          if(!passMatch) return null
           return {
             id: isExistingUser.id.toString(),
             name: isExistingUser.name,
-            email: isExistingUser.email
-          }
-        } catch (e) {
-          return null;
-        }
-      },
-    }),
-    CredentialsProvider({
-      name: "signup",
-      credentials: {
-        name: { label: "name", type: "text", required: true },
-        email: { label: "email", type: "text", required: true },
-        password: { label: "password", type: "password", required: true },
-      },
-
-      async authorize(
-        credentials: Record<"name" | "email" | "password", string> | undefined
-      ) {
-        console.log("auth")
-        const hashedPassword = createHash("sha256")
-          .update(credentials?.password + "salt")
-          .digest("hex");
-        try {
-          const isExistingUser = await prisma.user.findUnique({
-            where: {
-              email: credentials?.email,
-            },
-          });
-          if (isExistingUser) {
-            return null;
-          }
-          const newUser = await prisma.user.create({
-            data: {
-              name: credentials?.name as string,
-              email: credentials?.email as string,
-              password: hashedPassword,
-            },
-          });
-          console.log(newUser)
-          return {
-            id: newUser.id.toString(),
-            name: newUser.name,
-            email: newUser.email
+            email: isExistingUser.email,
           };
-        } catch (e: any) {
+        } catch (e) {
           return null;
         }
       },
@@ -85,8 +42,7 @@ export const authOptions = {
       return session;
     },
   },
-  pages:{
+  pages: {
     signIn: "/signin",
-    signUp: "/signUp"
-  }
+  },
 };
