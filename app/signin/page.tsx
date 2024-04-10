@@ -96,7 +96,7 @@ export default function Page() {
           </div>
         )}
         <h2 className="text-gray-500 text-sm mt-5">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/signup">
             {" "}
             <span className="text-indigo-700 hover:underline cursor-pointer">

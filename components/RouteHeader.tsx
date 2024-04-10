@@ -14,7 +14,7 @@ export default function Header(path: string, session: any) {
               </span>
             </h2>
             <h2 className="text-xs bg-clip-text text-transparent bg-gradient-to-r from-pink-300 to-indigo-600">
-              Explore Your Data's Journey
+              Explore Your Data&apos;s Journey
             </h2>
           </div>
         </Link>
