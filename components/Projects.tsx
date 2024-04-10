@@ -26,8 +26,8 @@ export default function Projects(){
 
     const allProjects  = (projects: projectProps[]) => {
         return <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6'>
-            {projects.map((p) => { return <>
-            <Link key={p.id} href={`/workspace/${p.id}`}>
+            {projects.map((p) => { return <div key={p.id}>
+            <Link href={`/workspace/${p.id}`}>
                 <div className="flex justify-center items-end bg-gradient-to-tr from-pink-400 to-cyan-400 rounded-md h-36 w-60 cursor-pointer opacity-75 hover:opacity-100 transition-opacity duration-300">
                     <div className='flex justify-between w-full px-3 pb-1'>
                         <h2 className='text-xs text-white'>{p.name}</h2>
@@ -35,7 +35,7 @@ export default function Projects(){
                     </div>
                 </div>
             </Link>
-            </>
+            </div>
             })}
             <div onClick={() => setFloat(true)} className="flex justify-center items-center bg-gray-600 rounded-md h-36 w-60 cursor-pointer hover:bg-gray-700 transition-colors duration-300">
                 <p className="text-center text-white text-3xl">+</p>

@@ -54,7 +54,6 @@ export default function Workspace({ id }: { id: string }) {
     height: typeof window !== "undefined" ? window.innerHeight : 0,
   });
 
-  console.log(process.env.NEXT_PUBLIC_accessKeyId)
   const session = useSession()
   if(session.status==='unauthenticated'){
     router.push("/")
@@ -113,8 +112,8 @@ export default function Workspace({ id }: { id: string }) {
   async function handleFileUpload(file: any) {
     setUploading(true);
     const region = "ap-south-1";
-    const accessKeyId = "AKIAYS2NUX5CDKGEO2LE";
-    const secretAccessKey = "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";
+    const accessKeyId = process.env.NEXT_PUBLIC_accessKeyId || "";
+    const secretAccessKey = process.env.NEXT_PUBLIC_secretAccessKey || "";
 
     AWS.config.update({
       region: region,
@@ -149,7 +148,7 @@ export default function Workspace({ id }: { id: string }) {
         const c = plot.column;
         if (processedData) {
           return (
-            <div className="bg-gray-500 rounded-xl">
+            <div key={plot.id} className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
                 <h2 className="pt-1">
                   Density Chart:{" "}
@@ -198,7 +197,7 @@ export default function Workspace({ id }: { id: string }) {
             c
           );
           return (
-            <div className="bg-gray-500 rounded-xl">
+            <div key={plot.id} className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
                 <h2>
                   Area Chart:{" "}
@@ -242,7 +241,7 @@ export default function Workspace({ id }: { id: string }) {
         const c = plot.column;
         if (processedData) {
           return (
-            <div className="bg-gray-500 rounded-xl">
+            <div key={plot.id} className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
                 <h2>
                   Histogram:{" "}
@@ -291,7 +290,7 @@ export default function Workspace({ id }: { id: string }) {
             c
           );
           return (
-            <div className="bg-gray-500 rounded-xl">
+            <div key={plot.id} className="bg-gray-500 rounded-xl">
               <div className="flex justify-between px-3">
                 <h2>
                   Line Plot:{" "}
@@ -330,7 +329,7 @@ export default function Workspace({ id }: { id: string }) {
               />
             </div>
           );
-        } else return <div></div>;
+        } else return <div  key={plot.id}></div>;
       }
     });
   };
