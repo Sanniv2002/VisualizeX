@@ -187,7 +187,7 @@ export default function Workspace({ id }: { id: string }) {
               />
             </div>
           );
-        } else return <div></div>;
+        } else return <div key={plot.id}></div>;
       } else if (plot.type === "Area") {
         const c = plot.column;
 
@@ -236,7 +236,7 @@ export default function Workspace({ id }: { id: string }) {
               />
             </div>
           );
-        } else return <div></div>;
+        } else return <div key={plot.id}></div>;
       } else if (plot.type === "Histo") {
         const c = plot.column;
         if (processedData) {
@@ -280,7 +280,7 @@ export default function Workspace({ id }: { id: string }) {
               />
             </div>
           );
-        } else return <div></div>;
+        } else return <div key={plot.id}></div>;
       } else if (plot.type === "Line") {
         const c = plot.column;
 
