@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { redirect } from "next/navigation";
 
 export default function Header(path: string, session: any) {
   return (
@@ -59,7 +58,7 @@ export default function Header(path: string, session: any) {
               {" "}
               <Link href="/docs">Docs</Link>{" "}
             </li>
-            <li onClick={redirect("https://github.com/Sanniv2002/VisualizeX")} className="bg-white text-md bg-clip-text text-transparent cursor-pointer hover:bg-gradient-to-r from-red-500 to-indigo-600">
+            <li className="bg-white text-md bg-clip-text text-transparent cursor-pointer hover:bg-gradient-to-r from-red-500 to-indigo-600">
               Github
             </li>
             <li className="bg-white text-md bg-clip-text text-transparent cursor-pointer hover:bg-gradient-to-r from-red-500 to-indigo-600">
