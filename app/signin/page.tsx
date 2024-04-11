@@ -51,7 +51,7 @@ export default function Page() {
   }
 
   return (
-    <main className="lg:grid lg:grid-cols-2 bg-gray-900 h-screen items-center">
+    <main className="lg:grid lg:grid-cols-2 bg-gray-900 h-screen flex justify-center items-center">
 
       {toast? <Toast success={success?.success as boolean} warning={success?.warning as string} />:null}
       
