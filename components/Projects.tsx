@@ -25,7 +25,7 @@ export default function Projects(){
     }, [float])
 
     const allProjects  = (projects: projectProps[]) => {
-        return <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6'>
+        return <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-y-6 sm:pl-3 pl-0'>
             {projects.map((p) => { return <div key={p.id}>
             <Link href={`/workspace/${p.id}`}>
                 <div className="flex justify-center items-end bg-gradient-to-tr from-pink-400 to-cyan-400 rounded-md h-36 w-60 cursor-pointer opacity-75 hover:opacity-100 transition-opacity duration-300">
