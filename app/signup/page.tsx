@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { signup } from "../actions/user";
 import Toast from "@/components/toast";
 import { useRouter } from "next/navigation";
+import { signUpSchema } from "@/app/utils/schema";
 
 export default function Page() {
   const router = useRouter()
@@ -72,28 +73,43 @@ export default function Page() {
           <button
             onClick={async () => {
               //Check if form fields are missing
-              if (nameRef.current && passRef.current && emailRef.current) {
-                setClicked(true);
-                const token = await signup(nameRef.current, emailRef.current, passRef.current);
-                if (token) {
-                  setToast(true);
-                  setSuccess({
-                    success: true,
-                    warning: "Successfully signed up",
-                  });
-                  setTimeout(() => setToast(false), 3000);
-                  await new Promise((resolve) => setTimeout(resolve, 1000))
-                  router.push("/signin")
-                } else {
-                  setToast(true);
-                  setSuccess({
-                    success: false,
-                    warning: "Email ID is already taken",
-                  });
-                  setTimeout(() => setToast(false), 3000);
-                }
-                setClicked(false);
+              const data = {
+                name: nameRef.current,
+                email: emailRef.current,
+                password: passRef.current
               }
+              try{
+                if(signUpSchema.parse(data)){
+                  setClicked(true);
+                  const token = await signup(nameRef.current, emailRef.current, passRef.current);
+                  if (token) {
+                    setToast(true);
+                    setSuccess({
+                      success: true,
+                      warning: "Successfully signed up",
+                    });
+                    setTimeout(() => setToast(false), 3000);
+                    router.push("/signin")
+                  } else {
+                    setToast(true);
+                    setSuccess({
+                      success: false,
+                      warning: "Email ID is already taken",
+                    });
+                    setTimeout(() => setToast(false), 3000);
+                  }
+                  setClicked(false);
+                }
+              }
+              catch(e){
+                setToast(true);
+                setSuccess({
+                  success: false,
+                  warning: "Please check if email is valid and password length",
+                });
+                setTimeout(() => setToast(false), 3000);
+              }
+              setClicked(false);
             }}
             className=" bg-indigo-700 text-gray-200 p-2 rounded-xl w-80 hover:bg-gray-600 hover:text-gray-300 transition-colors duration-300"
           >

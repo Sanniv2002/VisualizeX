@@ -4,10 +4,15 @@ import prisma from "@/db";
 import { hash } from "bcrypt";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../lib/auth";
+import { signUpSchema } from "@/app/utils/schema";
+import { signInSchema } from "@/app/utils/schema";
 
 export async function signup(name: string, email: string, password: string) {
   try {
     //Find if user already exists
+    if(!signUpSchema.safeParse({name, email, password}).success){
+      return false
+    }
     const isExistingUser = await prisma.user.findUnique({
       where: {
         email: email,

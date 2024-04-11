@@ -1,5 +1,6 @@
 import prisma from "@/db";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { createHash } from "crypto";
 import { compare, hash } from "bcrypt";
 

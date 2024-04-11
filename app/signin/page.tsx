@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import Toast from "@/components/toast";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { signInSchema } from "@/app/utils/schema"
 
 export default function Page() {
   const [quote, setQuote] = useState<JSX.Element | null>(null);
@@ -27,27 +28,44 @@ export default function Page() {
 
   const onSubmit = async () => {
     setClicked(true);
-    const result = await signIn("credentials", {
+    const data = {
       email: emailRef.current,
-      password: passRef.current,
-      redirect: false,
-      callbackUrl: "/dashboard"
-    })
-    console.log(result)
-    if(!result?.ok)
-    {
-      setToast(true);
-      setSuccess({
-        success: false,
-        warning: "Wrong Password/user doesn't exists"
-      })
-      setTimeout(() => setToast(false), 3000);
+      password: passRef.current
     }
-    else{
-      router.push("/dashboard")
+    try{
+      if(signInSchema.parse(data)){
+        const result = await signIn("credentials", {
+          email: emailRef.current,
+          password: passRef.current,
+          redirect: false,
+          callbackUrl: "/dashboard"
+        })
+        if(!result?.ok)
+        {
+          setToast(true);
+          setSuccess({
+            success: false,
+            warning: "Wrong Password/user doesn't exists"
+          })
+          setTimeout(() => setToast(false), 3000);
+        }
+        else{
+          router.push("/dashboard")
+        }
+    
+        setClicked(false);
+      }
+    }
+    catch(e: any){
+      setToast(true);
+          setSuccess({
+            success: false,
+            warning: "Check if email is valid or password is too short"
+          })
+          setTimeout(() => setToast(false), 3000);
+      setClicked(false);
     }
 
-    setClicked(false);
   }
 
   return (
