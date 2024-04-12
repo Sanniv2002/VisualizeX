@@ -3,6 +3,7 @@ import Link from "next/link";
 import Quotes from "@/components/Quotes";
 import { useEffect, useRef, useState } from "react";
 import { signup } from "../actions/user";
+import { signIn } from "next-auth/react";
 import Toast from "@/components/toast";
 import { useRouter } from "next/navigation";
 import { signUpSchema } from "@/app/utils/schema";
@@ -27,6 +28,13 @@ export default function Page() {
   useEffect(() => {
     setQuote(Quotes);
   }, []);
+
+  const googleAuth = () => {
+    signIn("google", {
+      redirect: false,
+      callbackUrl: "/dashboard",
+    });
+  };
 
   return (
     <main className="lg:grid lg:grid-cols-2 bg-gray-900 h-screen flex justify-center items-center">
@@ -122,6 +130,23 @@ export default function Page() {
             <div className="w-2 h-2 bg-violet-600 dark:bg-violet-400 rounded-full animate-pulse"></div>
           </div>
         )}
+
+<button
+            onClick={googleAuth}
+            type="button"
+            className="text-white bg-[#4285F4] hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-[#4285F4]/50 font-medium text-sm px-5 py-2.5 text-center inline-flex items-center justify-center dark:focus:ring-[#4285F4]/55 me-0 mb-2 transition-colors duration-300 mt-2 w-80 rounded-xl"
+          >
+            <svg
+              className="w-4 h-4 me-2"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 18 19"
+            >
+              <path d="M8.842 18.083a8.8 8.8 0 0 1-8.65-8.948 8.841 8.841 0 0 1 8.8-8.652h.153a8.464 8.464 0 0 1 5.7 2.257l-2.193 2.038A5.27 5.27 0 0 0 9.09 3.4a5.882 5.882 0 0 0-.2 11.76h.124a5.091 5.091 0 0 0 5.248-4.057L14.3 11H9V8h8.34c.066.543.095 1.09.088 1.636-.086 5.053-3.463 8.449-8.4 8.449l-.186-.002Z" />
+            </svg>
+            Sign up with Google
+          </button>
 
         <h2 className="text-gray-500 text-sm mt-5">
           Already have an account?{" "}
