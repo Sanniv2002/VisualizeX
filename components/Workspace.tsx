@@ -6,7 +6,7 @@ import { Histogram } from "./Plots/Histogram";
 import { useState, useEffect } from "react";
 import NewPlot from "./NewPlot";
 import * as d3 from "d3";
-import 'dotenv/config'
+import "dotenv/config";
 import { useRouter } from "next/navigation";
 import Delete from "./Delete";
 import {
@@ -54,9 +54,9 @@ export default function Workspace({ id }: { id: string }) {
     height: typeof window !== "undefined" ? window.innerHeight : 0,
   });
 
-  const session = useSession()
-  if(session.status==='unauthenticated'){
-    router.push("/")
+  const session = useSession();
+  if (session.status === "unauthenticated") {
+    router.push("/");
   }
 
   async function parseCSV(address: string) {
@@ -84,10 +84,10 @@ export default function Workspace({ id }: { id: string }) {
 
       //This condition is used to skip an iteration whenever it encounters a true string in the first column element, since it cannot be used for any plotting
       //Regex is used to check whether if it is a string
-      if (!/^\d+$/.test(rows[0][i].toString())) continue;
+      if (!/^\d+(\.\d+)?$/.test(rows[0][i].toString())) continue;
 
       for (let j = 0; j < rows?.length; j++)
-        values.push(parseInt(rows[j][i] as string));
+        values.push(parseFloat(rows[j][i] as string));
 
       //await new Promise((resolve) => setTimeout(resolve, 100));
       finalcommonData.push({
@@ -329,7 +329,7 @@ export default function Workspace({ id }: { id: string }) {
               />
             </div>
           );
-        } else return <div  key={plot.id}></div>;
+        } else return <div key={plot.id}></div>;
       }
     });
   };
@@ -355,12 +355,11 @@ export default function Workspace({ id }: { id: string }) {
       const project = await getProjectDetails(id);
       if (project?.csv !== null) {
         await parseCSV(project?.csv as string);
-        setIsFile(true)
+        setIsFile(true);
       }
     }
     init();
   }, [isFile]);
-
 
   useEffect(() => {
     if (options.length && rows.length) {
@@ -387,7 +386,7 @@ export default function Workspace({ id }: { id: string }) {
               <label className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-500">
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <svg
-                  className="w-8 h-8 mt-3"
+                    className="w-8 h-8 mt-3"
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 64 80"
                     fill="none"
