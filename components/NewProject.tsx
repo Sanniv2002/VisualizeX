@@ -19,11 +19,11 @@ export default function NewProject(props: Props) {
         onChange={(e) =>nameRef.current = e.target.value}
         className="bg-gray-700 p-2 rounded-lg text-gray-300"
         type="text"
-        maxLength={20}
+        maxLength={30}
       />
       <h2 className="text-white text-sm mb-2 mt-3">Description</h2>
       <textarea
-        maxLength={40}
+        maxLength={100}
         onChange={(e) =>descRef.current = e.target.value}
         rows={3}
         className="bg-gray-700 p-2 rounded-lg text-gray-300 mb-10"

@@ -38,7 +38,7 @@ export default function Workspace({ id }: { id: string }) {
   const [del, setDel] = useState<boolean>(false);
   const [trigger, setTrigger] = useState(false);
   const [isFile, setIsFile] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [plots, setPlots] = useState<
     | {
         id: string;
@@ -61,7 +61,6 @@ export default function Workspace({ id }: { id: string }) {
 
   async function parseCSV(address: string) {
     try {
-      setLoading(true);
       const rows_arr: (string[] | number[])[] = [];
       //GET REQUEST HERE FOR CSV FETCHING
       const data = await d3.csv(address);
@@ -70,7 +69,6 @@ export default function Workspace({ id }: { id: string }) {
         rows_arr.push(Object.values(d));
       });
       setRows(rows_arr);
-      setLoading(false);
     } catch (e) {
       console.log("Unexpected error occured: ", e);
     }
@@ -137,9 +135,9 @@ export default function Workspace({ id }: { id: string }) {
       ) => {
         await updateCsvLink(id, data.Location);
         setIsFile(true);
+        setUploading(false);
       }
     );
-    setUploading(false);
   }
 
   const PlotsRenderer = () => {
@@ -370,6 +368,7 @@ export default function Workspace({ id }: { id: string }) {
   useEffect(() => {
     async function init() {
       const allCharts = await getAllCharts(id);
+      setLoading(false);
       setPlots(allCharts);
     }
     init();
@@ -468,6 +467,7 @@ export default function Workspace({ id }: { id: string }) {
             <label
               onClick={() => router.push("/dashboard")}
               className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-400 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-500 dark:hover:border-blue-300 dark:hover:bg-blue-500"
+              title="Dashboard"
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
@@ -530,6 +530,7 @@ export default function Workspace({ id }: { id: string }) {
             <label
               onClick={() => setDel(true)}
               className="flex flex-col items-center justify-center w-44 border-2 border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-400 dark:hover:border-red-700 dark:hover:bg-red-400"
+              title="Delete Project"
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg
@@ -547,10 +548,20 @@ export default function Workspace({ id }: { id: string }) {
         </div>
       </div>
 
-      {isFile && !loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <PlotsRenderer />
+      {isFile ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pb-9">
+          {loading ? (
+            <div className="flex items-center justify-center col-span-2 space-x-2 h-full bg-gray-900 pt-20">
+              <div className="w-4 h-4 bg-violet-600 dark:bg-violet-400 rounded-full animate-pulse"></div>
+              <div className="w-4 h-4 bg-violet-600 dark:bg-violet-400 rounded-full animate-pulse"></div>
+              <div className="w-4 h-4 bg-violet-600 dark:bg-violet-400 rounded-full animate-pulse"></div>
+            </div>
+          ) : (
+            <PlotsRenderer />
+          )}
         </div>
+      ) : uploading ? (
+        <div className="flex justify-center text-gray-300">Uploading...</div>
       ) : (
         <div className="flex justify-center text-gray-300">
           Select a file to begin
@@ -559,7 +570,6 @@ export default function Workspace({ id }: { id: string }) {
 
       {float ? (
         <div className="fixed inset-0 bg-gray-700 h-screen flex items-center justify-center bg-opacity-45 backdrop-blur-sm">
-          {/* Lots of prop drilling */}
           <NewPlot
             projectId={id}
             setFloat={setFloat}
